@@ -39,7 +39,7 @@
 (define (unit s/c) (cons s/c mzero))
 (define mzero '())
 
-;;; unify :: term -> term -> substitution (an assoc list)
+;; unify :: term -> term -> substitution (an assoc list)
 (define (unify u v s)
   ;; See if u and v unify under substitutions s
   (let ([u (walk u s)]
@@ -53,6 +53,9 @@
          (and s (unify (cdr u) (cdr v) s)))]
       [else (and (equiv? u v) s)])))
 
+;; What shape does a state have? It is
+;;     (cons substitutions: assoc-list, var-counter: integer)
+
 ;; Goal constructor 2: call/fresh
 ;; call/fresh :: (a -> goal) -> goal
 (define (call/fresh f)
@@ -60,3 +63,25 @@
   (λ (s/c)                              ; a state
     (let ([c (cdr s/c)])
       ((f (var c)) (cons (car s/c) (+ c 1))))))
+
+;; Disjoint and Conjoint goal constructors
+;; disj | conj :: goal -> goal -> goal
+(define (disj g₁ g₂)
+  (λ (s/c) (mplus (g₁ s/c) (g₂ s/c))))
+
+(define (conj g₁ g₂)
+  (λ (s/c) (bind (g₁ s/c) g₂)))
+
+;; mplus: merge streams
+(define (mplus $₁ $₂)
+  (cond
+    [(null? $₁) $₂]
+    [(procedure? $₁) (λ () (mplus $₂ ($₁)))]
+    [else (cons (car $₁) (mplus (cdr $₁) $₂))]))
+
+;; bind: given a stream and a goal, walk the stream with the goal
+(define (bind $ g)
+  (cond
+    [(null? $) mzero]
+    [(procedure? $) (λ () (bind ($) g))]
+    [else (mplus (g (car $)) (bind (cdr $) g))]))
