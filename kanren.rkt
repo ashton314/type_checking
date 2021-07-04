@@ -1,5 +1,7 @@
 #lang racket/base
 
+(require racket/pretty)
+
 (provide (all-defined-out))
 
 (define empty-state '(() . 0))
@@ -51,7 +53,7 @@
       [(and (pair? u) (pair? v))
        (let ([s (unify (car u) (car v) s)])
          (and s (unify (cdr u) (cdr v) s)))]
-      [else (and (equiv? u v) s)])))
+      [else (and (eqv? u v) s)])))
 
 ;; What shape does a state have? It is
 ;;     (cons substitutions: assoc-list, var-counter: integer)
@@ -163,7 +165,6 @@
                        (walk* (cdr v) s))]
       [else v])))
 
-(define empty-state '(() . 0))
 (define (call/empty-state g) (g empty-state))
 
 (define-syntax run
