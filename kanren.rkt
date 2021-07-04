@@ -85,3 +85,95 @@
     [(null? $) mzero]
     [(procedure? $) (λ () (bind ($) g))]
     [else (mplus (g (car $)) (bind (cdr $) g))]))
+
+;;; What follows are some convenience macros to make programming with μKanren more natural
+
+(define-syntax Zzz
+  (syntax-rules ()
+    [(_ g) (λ (s/c) (λ () (g s/c)))]))
+
+(define-syntax conj+
+  (syntax-rules ()
+    [(_ g) (Zzz g)]
+    [(_ g0 gs ...) (conj (Zzz g0) (conj+ gs ...))]))
+
+(define-syntax disj+
+  (syntax-rules ()
+    [(_ g) (Zzz g)]
+    [(_ g0 gs ...) (disj (Zzz g0) (disj+ gs ...))]))
+
+(define-syntax conde
+  (syntax-rules ()
+    [(_ (g gs ...) ...) (disj+ (conj+ g gs ...) ...)]))
+
+(define-syntax fresh
+  (syntax-rules ()
+    [(_ () g gs ...) (conj+ g gs ...)]
+    [(_ (x xs ...) g gs ...)
+     (call/fresh (λ (x) (fresh (xs ...) g gs ...)))]))
+
+;;; What shape does a stream $ have?
+;;;
+;;;     Stream :: (() -> (cons ⊤ Stream)) | ()
+;;;
+;;; A stream is either null or a thunk that returns a cons consisting
+;;; of a value and the rest of the stream
+
+;;; Stream -> List interface
+(define (pull $)
+  (if (procedure? $) (pull ($)) $))
+
+(define (take n $)
+  (if (zero? n) '()
+      (let ([$ (pull $)])
+        (cond
+          [(null? $) '()]
+          [else (cons (car $) (take (- n 1) (cdr $)))]))))
+
+(define (take-all $)
+  (let ([$ (pull $)])
+    (if (null? $) '() (cons (car $) (take-all (cdr $))))))
+
+;;; Reification utilities
+
+(define (mK-reify s/c*)
+  (map reify-state/1st-var s/c*))
+
+(define (reify-state/1st-var s/c)
+  (let ([v (walk* (var 0) (car s/c))])
+    (walk* v (reify-s v '()))))
+
+(define (reify-s v s)
+  (let ([v (walk v s)])
+    (cond
+      [(var? v)
+       (let ([n (reify-name (length s))])
+         (cons (cons v n) s))]
+      [(pair? v) (reify-s (cdr v) (reify-s (car v) s))]
+      [else s])))
+
+(define (reify-name n)
+  (string->symbol (string-append "_" "." (number->string n))))
+
+(define (walk* v s)
+  (let ([v (walk v s)])
+    (cond
+      [(var? v) v]
+      [(pair? v) (cons (walk* (car v) s)
+                       (walk* (cdr v) s))]
+      [else v])))
+
+(define empty-state '(() . 0))
+(define (call/empty-state g) (g empty-state))
+
+(define-syntax run
+  (syntax-rules ()
+    [(_ n (xs ...) g gs ...)
+     (mK-reify (take n (call/empty-state
+                        (fresh (xs ...) g gs ...))))]))
+
+(define-syntax run*
+  (syntax-rules ()
+    [(_ (xs ...) g gs ...)
+     (mK-reify (take-all (call/empty-state
+                          (fresh (xs ...) g gs ...))))]))
