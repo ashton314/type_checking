@@ -43,6 +43,8 @@
 
 ;; unify :: term -> term -> substitution (an assoc list)
 (define (unify u v s)
+  ;; (pretty-print `((u . ,u) (v . ,v)))
+  ;; (pretty-print `(s . ,s))
   ;; See if u and v unify under substitutions s
   (let ([u (walk u s)]
         [v (walk v s)])
