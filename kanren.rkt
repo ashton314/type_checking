@@ -4,13 +4,15 @@
 
 (provide (all-defined-out))
 
-(define empty-state '(() . 0))
+(define empty-state `(() . var0))
 
-(define (var c) (vector c))             ; turn c into a variable
-(define (var? x) (vector? x))           ; vector predicate
-(define (var=? x₁ x₂)
-  ;; variables are equal if they have the same value up in front
-  (= (vector-ref x₁ 0) (vector-ref x₂ 0)))
+(struct var (name) #:transparent)
+
+;; (define (var c) c)             ; turn c into a variable
+;; (define (var? x) (symbol? x))  ; vector predicate
+(define (var-maybe v) (if (var? v) v (var v)))
+(define (var=? x₁ x₂) (eq? (var-name x₁) (var-name x₂)))
+(define (fresh-var) (var (gensym 'v)))
 
 (define (walk u subst)
   ;; u is a variable and subst is an association list
@@ -66,7 +68,7 @@
   ;; Take a function 
   (λ (s/c)                              ; a state
     (let ([c (cdr s/c)])
-      ((f (var c)) (cons (car s/c) (+ c 1))))))
+      ((f (var-maybe c)) (cons (car s/c) (fresh-var))))))
 
 ;; Disjoint and Conjoint goal constructors
 ;; disj | conj :: goal -> goal -> goal
@@ -144,20 +146,23 @@
   (map reify-state/1st-var s/c*))
 
 (define (reify-state/1st-var s/c)
-  (let ([v (walk* (var 0) (car s/c))])
+  ;; (pretty-print s/c)
+  (let ([v (walk* (var 'var0) (car s/c))])
     (walk* v (reify-s v '()))))
 
 (define (reify-s v s)
   (let ([v (walk v s)])
     (cond
       [(var? v)
-       (let ([n (reify-name (length s))])
+       (let ([n (reify-name (var-name v))])
          (cons (cons v n) s))]
       [(pair? v) (reify-s (cdr v) (reify-s (car v) s))]
       [else s])))
 
 (define (reify-name n)
-  (string->symbol (string-append "_" "." (number->string n))))
+  (if (symbol? n)
+      n
+      (string->symbol (string-append "_" "." (number->string n)))))
 
 (define (walk* v s)
   (let ([v (walk v s)])
