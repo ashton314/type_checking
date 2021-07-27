@@ -28,17 +28,37 @@
                          (list (tc/= (tt/expr expr) (tt/bool))))]
     [`(,(or 'lambda 'λ) (,xs ...) ,body)
      (append (gen-constraints body)
-             (tc/= expr (tt/arrow (map (λ (x) (tt/var x)) xs) (tt/expr body))))]
+             (list (tc/= (tt/expr expr) (tt/arrow (map (λ (x) (tt/var x)) xs) (tt/expr body)))))]
     [`(,ef ,xs ...)
      (append (gen-constraints ef)
              (append-map gen-constraints xs)
              (list (tc/= (tt/expr ef) (tt/arrow (map tt/expr xs) (tt/expr expr)))))]))
 
+(define (i v [label 'v])
+  (printf "~a: " label)
+  (pretty-print v)
+  v)
+
 (define my-progn
-  '(+ 1 n))
+  '((λ (a) (+ a 1)) 5))
 
 (gen-constraints my-progn)
 
-(define (subtype? v t)
-  (if (and (type-type? v) (type-type? t))
-      ))
+;; (define (tt->kanren constraints subs)
+;;   (if (null? constraints)
+;;       (values constraints subs)
+;;       (match (car constraints)
+;;         [(tc/= (tt/expr e) type)
+;;          ])))
+
+;;; Make it so that numbers unify with their type
+(define (my-eqv? a b)
+  (or (and (tt/num? a) (number? b))
+      (and (tt/num? b) (number? a))
+      (and (tt/bool? b) (boolean? a))
+      (and (tt/bool? b) (boolean? a))
+      (eqv? a b)))
+
+(equivalent? my-eqv?)
+
+;; TODO: type check a simple program

@@ -14,6 +14,8 @@
 (define (var=? x₁ x₂) (eq? (var-name x₁) (var-name x₂)))
 (define (fresh-var) (var (gensym 'v)))
 
+(define equivalent? (make-parameter eqv?))
+
 (define (walk u subst)
   ;; u is a variable and subst is an association list
   ;; This function tries to find a binding for u in the substitution assoc list.
@@ -57,7 +59,7 @@
       [(and (pair? u) (pair? v))
        (let ([s (unify (car u) (car v) s)])
          (and s (unify (cdr u) (cdr v) s)))]
-      [else (and (eqv? u v) s)])))
+      [else (and ((equivalent?) u v) s)])))
 
 ;; What shape does a state have? It is
 ;;     (cons substitutions: assoc-list, var-counter: integer)

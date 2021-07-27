@@ -1,8 +1,9 @@
 #lang racket/base
 
+(require racket/match)
+
 (require "kanren.rkt")
 
-(define )
-
-(define (W e Γ)
-  )
+;; (define (W e Γ)
+;;   (match e
+;;     [(? symbol?) ]))
