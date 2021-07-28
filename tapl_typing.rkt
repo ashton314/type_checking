@@ -31,6 +31,10 @@
                                                   (tc/= (tt/expr expr) (tt/num))))]
     [`(zero? ,e) (append (gen-constraints e)
                          (list (tc/= (tt/expr expr) (tt/bool))))]
+    [`(if ,c ,tc ,fc) (append (gen-constraints c) (gen-constraints tc) (gen-constraints fc)
+                              (list (tc/= (tt/expr c) (tt/bool))
+                                    (tc/= (tt/expr tc) (tt/expr fc))
+                                    (tc/= (tt/expr expr) (tt/expr tc))))]
     [`(,(or 'lambda 'λ) (,xs ...) ,body)
      (append (gen-constraints body)
              (list (tc/= (tt/expr expr) (tt/arrow (map (λ (x) (tt/var x)) xs) (tt/expr body)))))]
@@ -66,33 +70,25 @@
   (match cs
     ['() subs]
     [(cons (tc/= l r) c/rest)
-       (displayln "------unify/Θ------")
-       (i cs 'cs)
-       (i l 'left)
-       (i r 'right)
-       ;; (i subs 'Θ)
-       (match l
-         ;; Equal things unify
-         [(? (λ (x)
-               (or (equal? x r)
-                   (and (tt/bool? x) (boolean? (tt/expr-expr r)))
-                   (and (tt/num? x) (number? (tt/expr-expr r))))))
-          (t/unify c/rest subs)]
-
-         ;; Variables get subsituted
-         ;; FIXME: circularity check
-         [(or (tt/var _) (tt/expr _))
-          (if (hash-has-key? subs l)
+     (match (cons l r)
+       [(cons l r)
+        #:when (or (equal? l r)
+                   (and (tt/bool? l) (tt/expr? r) (boolean? (tt/expr-expr r)))
+                   (and (tt/num? l) (tt/expr? r) (number? (tt/expr-expr r))))
+        (t/unify c/rest subs)]
+       [(cons (or (tt/var _) (tt/expr _)) _)
+        (if (hash-has-key? subs l)
               (t/unify (cons (tc/= (hash-ref subs l) r) c/rest) subs)
-              (t/unify (i (walk/sub cs l r) 'new-cs) (extend+replace l r subs)))]
+              (t/unify (walk/sub cs l r) (extend+replace l r subs)))]
+       [(cons _ (or (tt/var _) (tt/expr _)))
+        (if (hash-has-key? subs r)
+              (t/unify (cons (tc/= (hash-ref subs r) l) c/rest) subs)
+              (t/unify (walk/sub cs r l) (extend+replace r l subs)))]
+       [(cons (tt/arrow (list domain₁) range₁) (tt/arrow (list domain₂) range₂))
+        (t/unify (append (list (tc/= domain₁ domain₂)
+                               (tc/= range₁ range₂))
+                         cs) subs)]
+       [else (error 't/unify "Failed to unify ~a and ~a with substitutions ~a" l r subs)])]))
 
-         ;; Arrow type
-         [(tt/arrow (list domain₁) range₁)
-          (match r
-            [(tt/arrow (list domain₂) range₂)
-             (t/unify (append (list (tc/= domain₁ domain₂)
-                                    (tc/= range₁ range₂))
-                              cs) subs)])]
-
-         ;; Failed to match
-         [else (error 't/unify "Failed to unify types: ~a and ~a;~nsubs: ~a" l r subs)])]))
+(define (tc expr)
+  (t/unify (gen-constraints expr)))
