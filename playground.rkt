@@ -12,7 +12,7 @@
          ((== p 'tom) (== s 'peter))))
 
 (define (grandfather g s)
-  (fresh (p) (conj+ (father g p) (father p s))))
+  (fresh (p) (father g p) (father p s)))
 
 ;; (define (great-grandfather gg s)
 ;;   (fresh (f) (conj+ (grandfather gg f) (father f s))))
