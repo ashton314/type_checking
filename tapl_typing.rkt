@@ -14,6 +14,7 @@
 (struct tt/num type-type () #:transparent)
 (struct tt/bool type-type () #:transparent)
 (struct tt/arrow type-type (domain range) #:transparent)
+(struct tt/string type-type () #:transparent)
 
 (define (i v [label 'v])
   (printf "~a: " label)
@@ -25,6 +26,11 @@
     [(? number?) (list (tc/= (tt/expr expr) (tt/num)))]
     [(? boolean?) (list (tc/= (tt/expr expr) (tt/bool)))]
     [(? symbol?) (list (tc/= (tt/expr expr) (tt/var expr)))]
+    [(? string?) (list (tc/= (tt/expr expr) (tt/string)))]
+    [`(,(or 'concat 'substr? 'string<?) ,s1 ,s2)
+     (list (tc/= (tt/expr expr) (tt/string))
+           (tc/= (tt/expr s1) (tt/string))
+           (tc/= (tt/expr s2) (tt/string)))]
     [`(,(or '+ '- '* '/) ,lhs ,rhs) (append (gen-constraints lhs) (gen-constraints rhs)
                                             (list (tc/= (tt/expr lhs) (tt/num))
                                                   (tc/= (tt/expr rhs) (tt/num))
@@ -74,6 +80,7 @@
        [(cons l r)
         #:when (or (equal? l r)
                    (and (tt/bool? l) (tt/expr? r) (boolean? (tt/expr-expr r)))
+                   (and (tt/string? l) (tt/expr? r) (string? (tt/expr-expr r)))
                    (and (tt/num? l) (tt/expr? r) (number? (tt/expr-expr r))))
         (t/unify c/rest subs)]
        [(cons (or (tt/var _) (tt/expr _)) _)
