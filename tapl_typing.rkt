@@ -27,10 +27,16 @@
     [(? boolean?) (list (tc/= (tt/expr expr) (tt/bool)))]
     [(? symbol?) (list (tc/= (tt/expr expr) (tt/var expr)))]
     [(? string?) (list (tc/= (tt/expr expr) (tt/string)))]
-    [`(,(or 'concat 'substr? 'string<?) ,s1 ,s2)
-     (list (tc/= (tt/expr expr) (tt/string))
-           (tc/= (tt/expr s1) (tt/string))
-           (tc/= (tt/expr s2) (tt/string)))]
+    [`(concat ,s1 ,s2)
+     (append (gen-constraints s1) (gen-constraints s2)
+             (list (tc/= (tt/expr expr) (tt/string))
+                   (tc/= (tt/expr s1) (tt/string))
+                   (tc/= (tt/expr s2) (tt/string))))]
+    [`(,(or 'substr? 'string<?) ,s1 ,s2)
+     (append (gen-constraints s1) (gen-constraints s2)
+             (list (tc/= (tt/expr expr) (tt/bool))
+                   (tc/= (tt/expr s1) (tt/string))
+                   (tc/= (tt/expr s2) (tt/string))))]
     [`(,(or '+ '- '* '/) ,lhs ,rhs) (append (gen-constraints lhs) (gen-constraints rhs)
                                             (list (tc/= (tt/expr lhs) (tt/num))
                                                   (tc/= (tt/expr rhs) (tt/num))
