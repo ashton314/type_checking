@@ -1,7 +1,8 @@
 #lang racket/base
 
-(require "kanren.rkt")
-(require racket/hash racket/pretty (except-in racket/match ==) (only-in racket/list append-map))
+(require racket/hash racket/pretty
+         (except-in racket/match ==)
+         (only-in racket/list append-map))
 
 ;;; Phase 1: constraint generation
 (struct type-constraint (lhs rhs) #:transparent)
