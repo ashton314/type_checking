@@ -84,20 +84,27 @@
     ['() subs]
     [(cons (tc/= l r) c/rest)
      (match (cons l r)
+       ;; l = r (for some definition of equality)
        [(cons l r)
         #:when (or (equal? l r)
                    (and (tt/bool? l) (tt/expr? r) (boolean? (tt/expr-expr r)))
                    (and (tt/string? l) (tt/expr? r) (string? (tt/expr-expr r)))
                    (and (tt/num? l) (tt/expr? r) (number? (tt/expr-expr r))))
         (t/unify c/rest subs)]
+
+       ;; l = X (where X is a variable)
        [(cons (or (tt/var _) (tt/expr _)) _)
         (if (hash-has-key? subs l)
               (t/unify (cons (tc/= (hash-ref subs l) r) c/rest) subs)
               (t/unify (walk/sub cs l r) (extend+replace l r subs)))]
+
+       ;; r = X (where X is a variable)
        [(cons _ (or (tt/var _) (tt/expr _)))
         (if (hash-has-key? subs r)
               (t/unify (cons (tc/= (hash-ref subs r) l) c/rest) subs)
               (t/unify (walk/sub cs r l) (extend+replace r l subs)))]
+
+       ;; arrow types: unify domain and range
        [(cons (tt/arrow (list domain₁) range₁) (tt/arrow (list domain₂) range₂))
         (t/unify (append (list (tc/= domain₁ domain₂)
                                (tc/= range₁ range₂))
