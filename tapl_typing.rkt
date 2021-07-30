@@ -59,6 +59,8 @@
 (define (extend+replace term newterm Θ)
   ;; TODO: occurs check
   (hash-set! Θ term newterm)
+  ;; Funny; TaPL doesn't mention this part, but PLAI does. If I use
+  ;; both, I get nicer results. Huh.
   (hash-for-each
    Θ
    (λ (k v)
